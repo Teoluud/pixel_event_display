@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def normalize_log_matrix(matrix: np.ndarray, norm: float) -> np.ndarray:
     """ Normalizes the log matrix to the norm value.
     """

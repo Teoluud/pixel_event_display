@@ -3,6 +3,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 import numpy as np
 
+
 class EventDisplay:
     """ 
     Dedicated class to handle all Matplotlib rendering.

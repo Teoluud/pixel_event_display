@@ -4,6 +4,7 @@ from lat.event import Event
 from lat.tkr_data import TkrData
 from lat.cal_data import CalData
 
+
 class ImportData:
     """ Class that handles the data importing and the parsing.
     """

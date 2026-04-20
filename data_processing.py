@@ -1,6 +1,7 @@
 from import_data import ImportData
 from event_display import EventDisplay
 
+
 class DataProcessing:
     """ 
     High-level orchestrator class. 

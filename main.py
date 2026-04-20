@@ -2,6 +2,7 @@ import sys
 
 from data_processing import DataProcessing
 
+
 if __name__ == '__main__':
     from optparse import OptionParser
     parser = OptionParser(usage= 'usage: %prog [options] run_id event_id')
@@ -9,7 +10,7 @@ if __name__ == '__main__':
     parser.add_option('-v', '--view', type=str, dest='v', default='x', help='select the view of the projection')
 
     (opts, args) = parser.parse_args()
-
+    
     if len(args) == 0:
         sys.exit('Please provide run and event id.')
 

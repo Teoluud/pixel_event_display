@@ -6,6 +6,7 @@ import pandas as pd
 from .event import Event
 from utils import normalize_log_matrix
 
+
 class CalData:
     """ Class that handles calorimeter data.
     """
