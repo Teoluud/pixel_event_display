@@ -47,7 +47,7 @@ class CalData:
         """ Returns the matrix and the binning for the top projection.
         """
         matrix, x_edges, y_edges = np.histogram2d(self.x, self.y,
-                                                   bins=[self.NUM_BINS_SIDE, self.NUM_BINS_SIDE],
+                                                   bins=[int(self.SIDE*2/self.event.BIN_WIDTH), int(self.SIDE*2/self.event.BIN_WIDTH)],
                                                    range=[[-self.SIDE,self.SIDE], [-self.SIDE,self.SIDE]],
                                                    weights=self.E)
         matrix_masked:np.ndarray    = np.ma.masked_where(matrix == 0, matrix)
