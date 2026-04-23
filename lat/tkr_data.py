@@ -12,7 +12,7 @@ class TkrData:
     """
 
     SIDE    = 1563.6/2      # mm
-    HEIGHT  = 660.          # mm    
+    HEIGHT  = 598.2         # mm    
     NUM_BINS_SIDE = 48*2
     NUM_BINS_Z = 18
     # To better represent real LAT dimensions, use BIN_HEIGHT and BIN_WIDTH. (from class Event)
@@ -46,8 +46,7 @@ class TkrData:
         self.E = tot_data / 1.602 * 3.62e-2
         matrix, x1_edges, z_edges = np.histogram2d(coord_data, z_data, 
                                             bins=[int(self.SIDE*2/self.event.BIN_WIDTH), int(self.HEIGHT/self.event.BIN_HEIGHT)], 
-                                            range=[[-self.SIDE,self.SIDE], [self.z.min(),self.z.max()]],        # Need to fix z range
+                                            range=[[-self.SIDE,self.SIDE], [0., self.HEIGHT]],
                                             weights=self.E)
         matrix_masked: np.ndarray   = np.ma.masked_where(matrix <= 0, matrix)
-        norm_matrix: np.ndarray     = normalize_log_matrix(matrix=matrix_masked, norm=self.event.total_energy)
-        return norm_matrix.T, x1_edges, z_edges
+        return matrix_masked.T, x1_edges, z_edges

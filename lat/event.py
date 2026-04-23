@@ -1,8 +1,8 @@
 class Event:
     """ Parent class for the whole event. 
     """
-    BIN_HEIGHT: float   = 17    # mm
-    BIN_WIDTH: float    = 17    # mm
+    BIN_HEIGHT: float   = 13.9    # mm
+    BIN_WIDTH: float    = 13.9    # mm
 
     def __init__(self, run_id: int, event_id: int, energy: float) -> None:
         """ Constructor.
