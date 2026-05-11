@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 from .event import Event
-from utils import normalize_log_matrix
 
 
 class CalData:
@@ -23,8 +22,11 @@ class CalData:
         """
         self.event = event
         self.df: pd.DataFrame   = dataframe
-        self.x: np.ndarray      = self.df['X'].to_numpy()
-        self.y: np.ndarray      = self.df['Y'].to_numpy()
+        raw_x = self.df['X'].to_numpy()
+        raw_y = self.df['Y'].to_numpy()
+        # Apply micro-jitter to all hits
+        self.x: np.ndarray      = raw_x + np.random.uniform(-1e-5, 1e-5, size=len(raw_x))
+        self.y: np.ndarray      = raw_y + np.random.uniform(-1e-5, 1e-5, size=len(raw_y))
         self.z: np.ndarray      = self.df['Z'].to_numpy()
         self.E: np.ndarray      = self.df['Energy_MeV'].to_numpy()
 
@@ -34,6 +36,7 @@ class CalData:
         Generates the horizontal pixel boundaries:
         - 2 bins per crystal
         - 3 bins per tower gap
+        - 4 bins for the outer gaps
         """
         edges = [start_coord]
         current_pos = start_coord
@@ -62,6 +65,38 @@ class CalData:
             current_pos += step
             edges.append(current_pos)
         return np.array(edges)
+    
+    def split_boundary_hits(self, coord_data: np.ndarray, bin_edges: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Takes the hits on the middle of the crystal (which then are right on the bin boundary), and split them on the adjacient bins.
+        It doubles the hit, then halves the energy and assigns one to the left of the boundary and one to the right.
+
+        (NOT IN USE)
+        """
+        # Identify which hits fall on the bin boundary
+        # We initiate the mask here as all 0
+        on_edge_mask = np.zeros(len(coord_data), dtype=bool)
+        # Check if there are hits on the edge (using np.isclose to avoid rounding errors)
+        for edge in bin_edges[1:-1]:
+            # Update the mask adding the condition to be close to the bin edge
+            on_edge_mask |= np.isclose(coord_data, edge, atol=1e-5)
+        # Separate hits not on edge
+        normal_coord = coord_data[~on_edge_mask]                       # ~ is the bitwise NOT operator
+        normal_z = self.z[~on_edge_mask]
+        normal_E = self.E[~on_edge_mask]
+        # Separate hits on the edge
+        edge_coord = coord_data[on_edge_mask]
+        edge_z = self.z[on_edge_mask]
+        edge_E = self.E[on_edge_mask] / 2.0
+        # Create the left and right copies
+        shift = 1e-4
+        left_coord = edge_coord - shift
+        right_coord = edge_coord + shift
+        # Recombine the arrays
+        final_coord = np.concatenate([normal_coord, left_coord, right_coord])
+        final_z = np.concatenate([normal_z, edge_z, edge_z])
+        final_E = np.concatenate([normal_E, edge_E, edge_E])        
+        return final_coord, final_z, final_E
 
 
     def get_matrix_side(self, coord: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -75,15 +110,11 @@ class CalData:
             sys.exit("Please choose 'x' or 'y' as tracker coordinate.")
         # Manually set the binning to better represent the CAL dimensions, without breaking the pixels.
         custom_x1_edges = self.generate_horizontal_edges(start_coord=-self.SIDE)
-        breakpoint()
-        # Add micro-jitter to force 50/50 split on exact crystal boundaries
-        jitter = np.random.uniform(low=-1e-5, high=1e-5, size=len(coord_data))
-        coord_data += jitter
         matrix, x1_edges, z_edges = np.histogram2d(coord_data, self.z,
                                                    bins=[custom_x1_edges, int(self.HEIGHT/self.event.BIN_HEIGHT)],
                                                    #range=[[-self.SIDE,self.SIDE], [self.z.min(),self.z.max()]],
                                                    weights=self.E)
-        matrix_masked:np.ndarray    = np.ma.masked_where(matrix == 0, matrix)
+        matrix_masked:np.ndarray = np.ma.masked_where(matrix == 0, matrix)
         return matrix_masked.T, x1_edges, z_edges
     
     def get_matrix_top(self):
@@ -92,12 +123,9 @@ class CalData:
         x_data = self.x.copy()
         y_data = self.y.copy()
         custom_edges = self.generate_horizontal_edges(start_coord=-self.SIDE)
-        jitter = np.random.uniform(low=-1e-5, high=1e-5, size=len(x_data))
-        x_data += jitter
-        y_data += jitter
         matrix, x_edges, y_edges = np.histogram2d(x_data, y_data,
                                                    bins=[custom_edges, custom_edges],
                                                    #range=[[-self.SIDE,self.SIDE], [-self.SIDE,self.SIDE]],
                                                    weights=self.E)
-        matrix_masked:np.ndarray    = np.ma.masked_where(matrix == 0, matrix)
+        matrix_masked:np.ndarray = np.ma.masked_where(matrix == 0, matrix)
         return matrix_masked.T, x_edges, y_edges
