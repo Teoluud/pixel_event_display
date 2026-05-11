@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 from .event import Event
-from utils import normalize_log_matrix
 
 
 class TkrData:
