@@ -1,3 +1,6 @@
+import numpy as np
+
+from stream_parser import StreamParser
 from import_data import ImportData
 from event_display import EventDisplay
 from utils import normalize_log_matrix
@@ -40,3 +43,60 @@ class DataProcessing:
             # self.display.plot_single_view(tkr_x, tkr_z, tkr_matrix, view_name=view, detector='TKR')
             # self.display.plot_single_view(cal_x, cal_z, cal_matrix_side, view_name=view, detector='CAL')
         self.display.show_all()
+
+
+class BatchProcessor:
+    """ Processes piped events and saves matrices in bulk.
+    """
+
+    def __init__(self, chunk_size: int = 10000) -> None:
+        """ Constructor.
+        """
+        self.chunk_size = chunk_size
+        self.stream_parser = StreamParser()
+
+    def process_and_save(self, view: str = 'x', output_prefix: str = 'dataset') -> None:
+        """ Runs the full pipeline for a specific projection in a batch.
+        """
+        tkr_matrices = []
+        cal_matrices = []
+        event_infos = []    # Store run_id, event_id, energy as metadata
+        chunk_index = 0
+        event_count = 0
+        # Iterate through the piped stream dinamically
+        for event, tkr, cal in self.stream_parser.parse_stream():
+            # Extract matrices
+            tkr_matrix, _, _ = tkr.get_matrix(view)
+            cal_matrix, _, _ = cal.get_matrix_side(view)
+            # Normalize to keV
+            norm_tkr = normalize_log_matrix(tkr_matrix, norm=event.total_energy)
+            norm_cal = normalize_log_matrix(cal_matrix, norm=event.total_energy)
+            # Fill masked areas with 0 for the NN
+            tkr_matrices.append(np.ma.filled(norm_tkr, fill_value=0.0))
+            cal_matrices.append(np.ma.filled(norm_cal, fill_value=0.0))
+            event_infos.append([event.run_id, event.event_id, event.total_energy])
+            event_count += 1
+            # Save and flush memory when chunk is full
+            if event_count >= self.chunk_size:
+                self._save_chunk(tkr_matrices, cal_matrices, event_infos, output_prefix, chunk_index)
+                # Reset lists to free up RAM
+                tkr_matrices = []
+                cal_matrices = []
+                event_infos = []
+                chunk_index += 1
+                event_count = 0
+        # Save any remaining events after the pipe closes
+        if event_count > 0:
+            self._save_chunk(tkr_matrices, cal_matrices, event_infos, output_prefix, chunk_index)
+
+    def _save_chunk(self, tkr, cal, info, prefix, index):
+        """ Helper to save a list of matrices to a compressed numpy archive.
+        """
+        filename = f'{prefix}_chunk_{index:04d}.npz'
+        # Convert lists to 3D numpy arrays: shape (N_events, Height, Width)
+        tkr_arr = np.array(tkr, dtype=np.float32)
+        cal_arr = np.array(cal, dtype=np.float32)
+        info_arr = np.array(info, dtype=np.float32)
+        # Save compressed
+        np.savez_compressed(filename, tkr=tkr_arr, cal=cal_arr, meta=info_arr)
+        print(f'Saved {filename} with {len(info_arr)} events.')
