@@ -3,7 +3,9 @@ import io
 
 import pandas as pd
 
-from . import Event, TkrData, CalData
+from .event import Event
+from .tkr_data import TkrData
+from .cal_data import CalData
 
 
 class StreamParser:

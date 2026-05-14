@@ -1,9 +1,9 @@
 import numpy as np
 
-from src.lat_pipeline.stream_parser import StreamParser
-from src.lat_pipeline.import_data import ImportData
-from src.lat_pipeline.event_display import EventDisplay
-from src.lat_pipeline.utils import normalize_log_matrix
+from .stream_parser import StreamParser
+from .import_data import ImportData
+from .event_display import EventDisplay
+from .utils import normalize_log_matrix
 
 
 class DataProcessing:
