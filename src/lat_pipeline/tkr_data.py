@@ -9,17 +9,19 @@ from .event import Event
 class TkrData:
     """ Class that handles the tracker data processing.
     """
-
-    SIDE    = 1563.6/2      # mm
-    HEIGHT  = 598.2         # mm    
     NUM_BINS_SIDE = 48*2
     NUM_BINS_Z = 18
     # To better represent real LAT dimensions, use BIN_HEIGHT and BIN_WIDTH. (from class Event)
 
-    def __init__(self, dataframe: pd.DataFrame, event: Event) -> None:
+    def __init__(self, dataframe: pd.DataFrame, event: Event, config: dict) -> None:
         """ Constructor.
         """
         self.event = event
+        self.config = config
+        # Load geometry from config
+        self.SIDE = self.config['geometry']['side_mm']
+        self.HEIGHT = self.config['geometry']['tkr']['height_mm']
+        # Extract data
         df: pd.DataFrame        = dataframe
         self.df_x: pd.DataFrame = df[df['View'] == 'X']
         self.df_y: pd.DataFrame = df[df['View'] == 'Y']

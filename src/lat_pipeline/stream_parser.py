@@ -3,7 +3,7 @@ import io
 
 import pandas as pd
 
-from lat import Event, TkrData, CalData
+from . import Event, TkrData, CalData
 
 
 class StreamParser:
@@ -12,8 +12,12 @@ class StreamParser:
     Yields parsed Event, TkrData, and CalData objects dynamically.
     """
 
-    @staticmethod
-    def parse_stream():
+    def __init__(self, config: dict) -> None:
+        """ Constructor.
+        """
+        self.config = config
+
+    def parse_stream(self):
         """ Generator that yields one event at a time from the pipe.
         """
         current_run_id = None
@@ -47,9 +51,9 @@ class StreamParser:
                     cal_csv = io.StringIO('\n'.join(cal_lines))
                     tkr_df = pd.read_csv(tkr_csv)
                     cal_df = pd.read_csv(cal_csv)
-                    event = Event(int(current_run_id), int(current_event_id), float(current_energy))
-                    tkr = TkrData(tkr_df, event)
-                    cal = CalData(cal_df, event)
+                    event = Event(int(current_run_id), int(current_event_id), float(current_energy), config=self.config)
+                    tkr = TkrData(tkr_df, event, config=self.config)
+                    cal = CalData(cal_df, event, config=self.config)
                     yield event, tkr, cal
             # Collect data based on the current block
             else:

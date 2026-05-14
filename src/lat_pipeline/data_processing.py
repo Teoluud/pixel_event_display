@@ -1,9 +1,9 @@
 import numpy as np
 
-from stream_parser import StreamParser
-from import_data import ImportData
-from event_display import EventDisplay
-from utils import normalize_log_matrix
+from src.lat_pipeline.stream_parser import StreamParser
+from src.lat_pipeline.import_data import ImportData
+from src.lat_pipeline.event_display import EventDisplay
+from src.lat_pipeline.utils import normalize_log_matrix
 
 
 class DataProcessing:
@@ -11,20 +11,21 @@ class DataProcessing:
     High-level orchestrator class. 
     It commands the ImportData (Controller), fetches processed matrices, and pushes them to the EventDisplay (View).
     """
-    def __init__(self, path: str, run_id: str, event_id: str) -> None:
+    def __init__(self, path: str, run_id: str, event_id: str, config: dict) -> None:
         """
         Constructor.
         """
         self.path       = path
         self.run_id     = run_id
         self.event_id   = event_id
+        self.config     = config
 
     def process_and_display(self, view: str = 'x') -> None:
         """
         Runs the full pipeline for a specific projection.
         """
         # Import data
-        importer = ImportData(self.path, self.run_id, self.event_id)
+        importer = ImportData(self.path, self.run_id, self.event_id, config=self.config)
         event, tkr, cal = importer.import_event()
         # Instantiate the display view
         self.display = EventDisplay(self.run_id, self.event_id, event_energy=event.total_energy)
@@ -49,11 +50,12 @@ class BatchProcessor:
     """ Processes piped events and saves matrices in bulk.
     """
 
-    def __init__(self, chunk_size: int = 10000) -> None:
+    def __init__(self, config: dict) -> None:
         """ Constructor.
         """
-        self.chunk_size = chunk_size
-        self.stream_parser = StreamParser()
+        self.config = config
+        self.chunk_size = self.config['pipeline']['chunk_size']
+        self.stream_parser = StreamParser(config=self.config)
 
     def process_and_save(self, view: str = 'x', output_prefix: str = 'dataset') -> None:
         """ Runs the full pipeline for a specific projection in a batch.

@@ -9,18 +9,20 @@ from .event import Event
 class CalData:
     """ Class that handles calorimeter data.
     """
-
-    SIDE    = 1563.6/2      # mm
-    HEIGHT  = 218.2         # mm
-    PITCH   = 27.84         # mm
-    TOWER_GAP = 40.42       # mm
-    EXT_GAP   = 53.01       # mm
     NUM_BINS_Z = 8
     
-    def __init__(self, dataframe: pd.DataFrame, event: Event) -> None:
+    def __init__(self, dataframe: pd.DataFrame, event: Event, config: dict) -> None:
         """ Constructor.
         """
         self.event = event
+        self.config = config
+        # Load geometry from config
+        self.SIDE = self.config['geometry']['side_mm']
+        self.HEIGHT = self.config['geometry']['cal']['height_mm']
+        self.PITCH = self.config['geometry']['cal']['pitch_mm']
+        self.TOWER_GAP = self.config['geometry']['cal']['tower_gap_mm']
+        self.EXT_GAP = self.config['geometry']['cal']['ext_gap_mm']
+        # Extract data
         self.df: pd.DataFrame   = dataframe
         raw_x = self.df['X'].to_numpy()
         raw_y = self.df['Y'].to_numpy()
@@ -30,8 +32,7 @@ class CalData:
         self.z: np.ndarray      = self.df['Z'].to_numpy()
         self.E: np.ndarray      = self.df['Energy_MeV'].to_numpy()
 
-    def generate_horizontal_edges(self, start_coord: float, crystal_pitch: float = PITCH, gap_width: float = TOWER_GAP, external_gap: float = EXT_GAP,
-                                  crystals_per_tower: int = 12, num_towers: int = 4) -> np.ndarray:
+    def generate_horizontal_edges(self, start_coord: float, crystals_per_tower: int = 12, num_towers: int = 4) -> np.ndarray:
         """ 
         Generates the horizontal pixel boundaries:
         - 2 bins per crystal
@@ -41,26 +42,26 @@ class CalData:
         edges = [start_coord]
         current_pos = start_coord
         # Add the pixels for the left outer gap
-        step = external_gap / 4.0
+        step = self.EXT_GAP / 4.0
         for t in range(4):
             current_pos += step
             edges.append(current_pos)
         # Add the pixels for the CAL
         for tower in range(num_towers):
             for c in range(crystals_per_tower):
-                half_pitch = crystal_pitch / 2.0
+                half_pitch = self.PITCH / 2.0
                 current_pos += half_pitch
                 edges.append(current_pos)
                 current_pos += half_pitch
                 edges.append(current_pos)
             # Bins for the gaps between towers
             if tower < num_towers -1:
-                step = gap_width / 3.0
+                step = self.TOWER_GAP / 3.0
                 for g in range(3):
                     current_pos += step
                     edges.append(current_pos)
         # Add the pixels for the right outer gap
-        step = external_gap / 4.0
+        step = self.EXT_GAP / 4.0
         for t in range(4):
             current_pos += step
             edges.append(current_pos)

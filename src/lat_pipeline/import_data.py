@@ -1,19 +1,18 @@
 import pandas as pd
 
-from lat.event import Event
-from lat.tkr_data import TkrData
-from lat.cal_data import CalData
+from . import Event, TkrData, CalData
 
 
 class ImportData:
     """ Class that handles the data importing and the parsing.
     """
     
-    def __init__(self, path: str, run_id: str, event_id: str) -> None:
+    def __init__(self, path: str, run_id: str, event_id: str, config: dict) -> None:
         """ Constructor.
         """
         self.run_id     = int(run_id)
         self.event_id   = int(event_id)
+        self.config     = config
         # Define file paths
         self.filename_prefix: str    = 'event_data'
         tkr_filename: str       = f'{self.filename_prefix}_TKR_{run_id}_{event_id}.csv'
@@ -35,7 +34,7 @@ class ImportData:
             energy = float(line.split(": ")[1])
         tkr_dataframe = self.read_csv(self.tkr_path)
         cal_dataframe = self.read_csv(self.cal_path)
-        event = Event(self.run_id, self.event_id, energy)
-        tkr     = TkrData(tkr_dataframe, event)
-        cal     = CalData(cal_dataframe, event)
+        event = Event(self.run_id, self.event_id, energy, config=self.config)
+        tkr = TkrData(tkr_dataframe, event, config=self.config)
+        cal = CalData(cal_dataframe, event, config=self.config)
         return event, tkr, cal

@@ -1,0 +1,16 @@
+geometry:
+  side_mm: 781.8
+  tkr:
+    height_mm: 598.2
+  cal:
+    height_mm: 218.2
+    pitch_mm: 27.84
+    tower_gap_mm: 40.42
+    ext_gap_mm: 53.01
+  event:
+    bin_width_mm: 13.9
+    bin_height_mm: 13.9
+
+pipeline:
+  chunk_size: 10000
+  jitter_bounds: 1e-5
