@@ -3,8 +3,9 @@ import argparse
 import logging
 import yaml
 from pathlib import Path
-
-SRC_DIR = Path(__file__).resolve().parents[1] / 'src'
+# Define working directory
+ROOT_DIR = Path(__file__).resolve().parents[1]
+SRC_DIR = ROOT_DIR / 'src'
 sys.path.append(str(SRC_DIR))
 
 from lat_pipeline.data_processing import DataProcessing, BatchProcessor
@@ -31,7 +32,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     # Load configuration
-    config = load_config(args.config)
+    absolute_config_path = ROOT_DIR / args.config
+    config = load_config(absolute_config_path)
     logger.info('Configuration loaded successfully.')
 
     if args.batch:
