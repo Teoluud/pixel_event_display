@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 from .event import Event
+from .utils import get_lat_x_edges
 
 
 class TkrData:
@@ -38,16 +39,19 @@ class TkrData:
             coord_data  = self.x
             z_data      = self.df_x['Z'].to_numpy()
             tot_data    = self.tot_x
+            custom_z_edges = self.config['geometry']['tkr']['z_edges_x']
         elif coord.lower() == 'y':
             coord_data  = self.y
             z_data      = self.df_y['Z'].to_numpy()
             tot_data    = self.tot_y
+            custom_z_edges = self.config['geometry']['tkr']['z_edges_y']
         else:
             sys.exit("Please choose 'x' or 'y' as tracker coordinate.")
         self.E = tot_data / 1.602 * 3.62e-2
+        custom_x_edges = get_lat_x_edges(self.config)
         matrix, x1_edges, z_edges = np.histogram2d(coord_data, z_data, 
-                                            bins=[int(self.SIDE*2/self.event.BIN_WIDTH), int(self.HEIGHT/self.event.BIN_HEIGHT)], 
-                                            range=[[-self.SIDE,self.SIDE], [0., self.HEIGHT]],
+                                            bins=[custom_x_edges, custom_z_edges], 
+                                            #range=[[-self.SIDE,self.SIDE], [0., self.HEIGHT]],
                                             weights=self.E)
         matrix_masked: np.ndarray   = np.ma.masked_where(matrix <= 0, matrix)
         return matrix_masked.T, x1_edges, z_edges

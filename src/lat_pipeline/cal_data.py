@@ -4,13 +4,13 @@ import numpy as np
 import pandas as pd
 
 from .event import Event
+from .utils import get_lat_x_edges
 
 
 class CalData:
     """ Class that handles calorimeter data.
     """
-    NUM_BINS_Z = 8
-    
+
     def __init__(self, dataframe: pd.DataFrame, event: Event, config: dict) -> None:
         """ Constructor.
         """
@@ -31,41 +31,6 @@ class CalData:
         self.y: np.ndarray      = raw_y + np.random.uniform(-1e-5, 1e-5, size=len(raw_y))
         self.z: np.ndarray      = self.df['Z'].to_numpy()
         self.E: np.ndarray      = self.df['Energy_MeV'].to_numpy()
-
-    def generate_horizontal_edges(self, start_coord: float, crystals_per_tower: int = 12, num_towers: int = 4) -> np.ndarray:
-        """ 
-        Generates the horizontal pixel boundaries:
-        - 2 bins per crystal
-        - 3 bins per tower gap
-        - 4 bins for the outer gaps
-        """
-        edges = [start_coord]
-        current_pos = start_coord
-        # Add the pixels for the left outer gap
-        step = self.EXT_GAP / 4.0
-        for t in range(4):
-            current_pos += step
-            edges.append(current_pos)
-        # Add the pixels for the CAL
-        for tower in range(num_towers):
-            for c in range(crystals_per_tower):
-                half_pitch = self.PITCH / 2.0
-                current_pos += half_pitch
-                edges.append(current_pos)
-                current_pos += half_pitch
-                edges.append(current_pos)
-            # Bins for the gaps between towers
-            if tower < num_towers -1:
-                step = self.TOWER_GAP / 3.0
-                for g in range(3):
-                    current_pos += step
-                    edges.append(current_pos)
-        # Add the pixels for the right outer gap
-        step = self.EXT_GAP / 4.0
-        for t in range(4):
-            current_pos += step
-            edges.append(current_pos)
-        return np.array(edges)
     
     def split_boundary_hits(self, coord_data: np.ndarray, bin_edges: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -110,9 +75,10 @@ class CalData:
         else:
             sys.exit("Please choose 'x' or 'y' as tracker coordinate.")
         # Manually set the binning to better represent the CAL dimensions, without breaking the pixels.
-        custom_x1_edges = self.generate_horizontal_edges(start_coord=-self.SIDE)
+        custom_x_edges = get_lat_x_edges(self.config).tolist()
+        custom_z_edges = np.linspace(-218.195, -47.395, 9).tolist()
         matrix, x1_edges, z_edges = np.histogram2d(coord_data, self.z,
-                                                   bins=[custom_x1_edges, int(self.HEIGHT/self.event.BIN_HEIGHT)],
+                                                   bins=[custom_x_edges, custom_z_edges],
                                                    #range=[[-self.SIDE,self.SIDE], [self.z.min(),self.z.max()]],
                                                    weights=self.E)
         matrix_masked:np.ndarray = np.ma.masked_where(matrix == 0, matrix)
@@ -123,7 +89,7 @@ class CalData:
         """
         x_data = self.x.copy()
         y_data = self.y.copy()
-        custom_edges = self.generate_horizontal_edges(start_coord=-self.SIDE)
+        custom_edges = get_lat_x_edges(self.config)
         matrix, x_edges, y_edges = np.histogram2d(x_data, y_data,
                                                    bins=[custom_edges, custom_edges],
                                                    #range=[[-self.SIDE,self.SIDE], [-self.SIDE,self.SIDE]],
