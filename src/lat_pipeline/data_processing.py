@@ -57,53 +57,72 @@ class BatchProcessor:
         self.chunk_size = self.config['pipeline']['chunk_size']
         self.stream_parser = StreamParser(config=self.config)
 
-    def process_and_save(self, view: str = 'x', output_prefix: str = 'dataset') -> None:
+    def _stack_side_view(self, tkr_matrix: np.ndarray, cal_matrix: np.ndarray, energy: float) -> np.ndarray:
+        """ Helper to normalize and stack a side projection.
+        """
+        norm_tkr = np.ma.filled(normalize_log_matrix(tkr_matrix, norm=energy), fill_value=0.0)
+        norm_cal = np.ma.filled(normalize_log_matrix(cal_matrix, norm=energy), fill_value=0.0)
+        # Create the physical gap between CAL and TKR (3-pixel gap for geometric accuracy (~75mm))
+        gap_pad = np.zeros((3, 113), dtype=np.float32)
+        # Stack vertically: CAL (bottom), Gap, TKR (top)
+        # Total rows = 8 + 3 + 18 = 27 rows
+        combined_matrix = np.vstack((norm_cal, gap_pad, norm_tkr))
+        rows = np.size(combined_matrix, axis=0)
+        columns = np.size(combined_matrix, axis=1)
+        # Pad the top to reach exactly 113x113
+        top_pad = columns-rows
+        square_matrix = np.pad(combined_matrix, pad_width=((0,top_pad), (0,0)), mode='constant', constant_values=0.0)
+        return square_matrix
+
+    def process_and_save(self, output_prefix: str = 'dataset') -> None:
         """ Runs the full pipeline for a specific projection in a batch.
         """
-        combined_matrices = []
+        matrices_x = []
+        matrices_y = []
+        matrices_top = []
         event_infos = []    # Store run_id, event_id, energy as metadata
         chunk_index = 0
         event_count = 0
         # Iterate through the piped stream dinamically
         for event, tkr, cal in self.stream_parser.parse_stream():
-            # Extract matrices
-            tkr_matrix, _, _ = tkr.get_matrix(view)
-            cal_matrix, _, _ = cal.get_matrix_side(view)
-            # Normalize to keV and fill masked areas with 0 for the NN
-            norm_tkr = np.ma.filled(normalize_log_matrix(tkr_matrix, norm=event.total_energy), fill_value=0.0)
-            norm_cal = np.ma.filled(normalize_log_matrix(cal_matrix, norm=event.total_energy), fill_value=0.0)
-            # Create the physical gap between CAL and TKR (10 pixels of empy space)
-            gap_pad = np.zeros((3, 113), dtype=np.float32)
-            # Stack vertically: CAL (bottom), Gap, TKR (top)
-            # Total rows = 8 + 10 + 18 = 36 rows
-            combined_matrix = np.vstack((norm_cal, gap_pad, norm_tkr))
-            rows = np.size(combined_matrix, axis=0)
-            columns = np.size(combined_matrix, axis=1)
-            # Pad the top to reach exactly 113x113
-            top_pad = columns-rows
-            square_matrix = np.pad(combined_matrix, pad_width=((0,top_pad), (0,0)), mode='constant', constant_values=0.0)
-            combined_matrices.append(square_matrix)
+            # Process X-Z view
+            tkr_x, _, _ = tkr.get_matrix('x')
+            cal_x, _, _ = cal.get_matrix_side('x')
+            combined_x = self._stack_side_view(tkr_x, cal_x, event.total_energy)
+            # Process Y-Z view
+            tkr_y, _, _ = tkr.get_matrix('y')
+            cal_y, _, _ = cal.get_matrix_side('y')
+            combined_y = self._stack_side_view(tkr_y, cal_y, event.total_energy)
+            # Process X-Y view (CAL only)
+            cal_top, _, _ = cal.get_matrix_top()
+            norm_top = np.ma.filled(normalize_log_matrix(cal_top, norm=event.total_energy), fill_value=0.0)
+            # Append to chunk lists
+            matrices_x.append(combined_x)
+            matrices_y.append(combined_y)
+            matrices_top.append(norm_top)
             event_infos.append([event.run_id, event.event_id, event.total_energy])
             event_count += 1
             # Save and flush memory when chunk is full
             if event_count >= self.chunk_size:
-                self._save_chunk(combined_matrices, event_infos, output_prefix, chunk_index)
+                self._save_chunk(matrices_x, matrices_y, matrices_top, event_infos, output_prefix, chunk_index)
                 # Reset lists to free up RAM
-                combined_matrices = []
-                event_infos = []
+                matrices_x, matrices_y, matrices_top, event_infos = [], [], [], []
                 chunk_index += 1
                 event_count = 0
         # Save any remaining events after the pipe closes
         if event_count > 0:
-            self._save_chunk(combined_matrices, event_infos, output_prefix, chunk_index)
+            self._save_chunk(matrices_x, matrices_y, matrices_top, event_infos, output_prefix, chunk_index)
 
-    def _save_chunk(self, images, info, prefix, index):
+    def _save_chunk(self, mat_x, mat_y, mat_top, info, prefix, index):
         """ Helper to save a list of matrices to a compressed numpy archive.
         """
         filename = f'{prefix}_chunk_{index:04d}.npz'
-        # Convert to a 3D tensor: shape (N_events, 113, 113)
-        img_arr = np.array(images, dtype=np.float32)
-        info_arr = np.array(info, dtype=np.float32)
         # Save compressed
-        np.savez_compressed(filename, images=img_arr, meta=info_arr)
-        print(f'Saved {filename} with {len(info_arr)} events.')
+        np.savez_compressed(
+            filename,
+            view_x=np.array(mat_x, dtype=np.float32),
+            view_y=np.array(mat_y, dtype=np.float32),
+            view_top=np.array(mat_top, dtype=np.float32),
+            meta=np.array(info, dtype=np.float32)
+        )
+        print(f'Saved {filename} with {len(info)} events.')
