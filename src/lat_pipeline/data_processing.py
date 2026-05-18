@@ -73,7 +73,7 @@ class BatchProcessor:
             norm_tkr = np.ma.filled(normalize_log_matrix(tkr_matrix, norm=event.total_energy), fill_value=0.0)
             norm_cal = np.ma.filled(normalize_log_matrix(cal_matrix, norm=event.total_energy), fill_value=0.0)
             # Create the physical gap between CAL and TKR (10 pixels of empy space)
-            gap_pad = np.zeros((10, 113), dtype=np.float32)
+            gap_pad = np.zeros((3, 113), dtype=np.float32)
             # Stack vertically: CAL (bottom), Gap, TKR (top)
             # Total rows = 8 + 10 + 18 = 36 rows
             combined_matrix = np.vstack((norm_cal, gap_pad, norm_tkr))
