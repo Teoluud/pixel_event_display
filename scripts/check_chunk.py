@@ -49,11 +49,6 @@ ax.set_title(f'Unified LAT Tensor (Run {meta_data[0][0]:.0f}, Event {meta_data[0
 ax.set_xlabel('LAT Width (113 Pixels)')
 ax.set_ylabel('LAT Height (113 Pixels)')
 
-# Draw horizontal lines to show where the subdetectors are
-ax.axhline(8, color='white', linestyle='--', alpha=0.5, label='Top of CAL (Row 8)')
-ax.axhline(18, color='cyan', linestyle='--', alpha=0.5, label='Bottom of TKR (Row 18)')
-ax.legend(loc='upper right')
-
 plt.tight_layout()
 plt.show()
 
