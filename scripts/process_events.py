@@ -39,7 +39,7 @@ if __name__ == '__main__':
     if args.batch:
         logger.info("Starting Batch Processing Mode from stdin...")
         batch_processor = BatchProcessor(config=config)
-        batch_processor.process_and_save(view=args.view)
+        batch_processor.process_and_save()
         logger.info('Batch processing complete.')
     else:
         if args.run is None or args.event is None:
