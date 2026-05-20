@@ -77,10 +77,10 @@ class ChunkValidator:
         if index >= self.num_events or index < 0:
             logger.error(f'Index {index} is out of bounds. File only has {self.num_events} events.')
             return
-        run_id, event_id, energy = self.meta[index]
+        run_id, event_id, energy, mc_energy = self.meta[index]
         # Create image
         fig, axes = plt.subplots(1, 3, figsize=(18, 6), constrained_layout=True)
-        fig.suptitle(f'Fermi-LAT All Views (Run {run_id:.0f}, Event {event_id:.0f}, {energy:.2f} MeV)', fontsize=16)
+        fig.suptitle(f'Fermi-LAT All Views (Run {run_id:.0f}, Event {event_id:.0f}, Energy {energy:.2f} MeV, McEnergy {mc_energy:.2f})', fontsize=16)
         # X-Z View
         axes[0].imshow(self.view_x[index], cmap='plasma', origin='lower', vmin=0, vmax=1)
         axes[0].set_title('X-Z Projection (Side View)')
@@ -102,6 +102,19 @@ class ChunkValidator:
         # Plot
         plt.show()
 
+    def check_energy_recon(self) -> None:
+        """ Plots the distribution of the energy reconstruction error.
+        """
+        energy = self.meta[:, 2]
+        mc_energy = self.meta[:, 3]
+        err_energy_relative = (energy - mc_energy) / mc_energy
+        plt.figure(figsize=(10,6))
+        plt.hist(err_energy_relative, bins=40, range=(-2., 2.))
+        plt.xlabel("Reconstructed energy relative error")
+        plt.title(f"Chunk: {self.filepath.name}")
+        plt.show()
+
+
     def close(self) -> None:
         """ Closes the numpy archive to free up memory.
         """
@@ -111,6 +124,7 @@ class ChunkValidator:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Validate and Visualize compressed LAT chunks.')
     parser.add_argument('file', type=str, help='Path to the .npz chunk file to validate')
+    parser.add_argument('--check-energy', action='store_true', help='Plot the distribution of the energy reconstruction error.')
     parser.add_argument('--event', type=int, default=0, help='Index of the event to visualize (default: 0)')
     parser.add_argument('--no-plot', action='store_true', help='Skip the visualization and only run validation checks')
 
@@ -120,8 +134,10 @@ if __name__ == '__main__':
     validator.verify_shapes()
     validator.print_summary()
     # Optionally visualize
-    if not args.no_plot:
+    if not args.no_plot and not args.check_energy:
         logger.info(f"Rendering visualization for event index {args.event}...")
         validator.visualize_event(index=args.event)
+    if args.check_energy:
+        validator.check_energy_recon()
     # Close
     validator.close()
