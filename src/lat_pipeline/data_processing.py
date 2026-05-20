@@ -100,7 +100,7 @@ class BatchProcessor:
             matrices_x.append(combined_x)
             matrices_y.append(combined_y)
             matrices_top.append(norm_top)
-            event_infos.append([event.run_id, event.event_id, event.total_energy])
+            event_infos.append([event.run_id, event.event_id, event.total_energy, event.mc_energy])
             event_count += 1
             # Save and flush memory when chunk is full
             if event_count >= self.chunk_size:

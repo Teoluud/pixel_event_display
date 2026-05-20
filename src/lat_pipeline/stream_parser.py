@@ -25,6 +25,7 @@ class StreamParser:
         current_run_id = None
         current_event_id = None
         current_energy = 0.0
+        current_mc_energy = 0.0
         tkr_lines = []
         cal_lines = []
         current_block = None
@@ -39,6 +40,7 @@ class StreamParser:
                 current_run_id = parts[2]
                 current_event_id = parts[4]
                 current_energy = parts[6]
+                current_mc_energy = parts[8]
             elif line.startswith("TKR_START"):
                 current_block = 'TKR'
                 tkr_lines = []  # Reset for new event
@@ -54,6 +56,7 @@ class StreamParser:
                     tkr_df = pd.read_csv(tkr_csv)
                     cal_df = pd.read_csv(cal_csv)
                     event = Event(int(current_run_id), int(current_event_id), float(current_energy), config=self.config)
+                    event.set_mc_energy(float(current_mc_energy))
                     tkr = TkrData(tkr_df, event, config=self.config)
                     cal = CalData(cal_df, event, config=self.config)
                     yield event, tkr, cal
