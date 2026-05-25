@@ -99,8 +99,6 @@ class ChunkValidator:
         axes[2].set_ylabel('LAT Y Width (113 Pixels)')
         # Colorbar
         fig.colorbar(mesh_top, ax=axes, label='Normalized Log10(Energy)', shrink=0.8, pad=0.02)
-        # Plot
-        plt.show()
 
     def check_energy_recon(self) -> None:
         """ Plots the distribution of the energy reconstruction error.
@@ -108,12 +106,41 @@ class ChunkValidator:
         energy = self.meta[:, 2]
         mc_energy = self.meta[:, 3]
         err_energy_relative = (energy - mc_energy) / mc_energy
+        bin_size = 0.1
+        num_bins = int((err_energy_relative.max() - err_energy_relative.min()) / bin_size)
         plt.figure(figsize=(10,6))
-        plt.hist(err_energy_relative, bins=40, range=(-2., 2.))
+        plt.hist(err_energy_relative, bins=num_bins)
         plt.xlabel("Reconstructed energy relative error")
         plt.title(f"Chunk: {self.filepath.name}")
-        plt.show()
 
+    def energy_spectrum(self) -> None:
+        """ Plots the reconstructed energy distribution.
+        """
+        fig, axes = plt.subplots(1, 2, figsize=(18, 6), constrained_layout=True)
+        fig.suptitle(f"Energy spectrum comparison - Chunk: {self.filepath.name}")
+        num_bins = 50
+        energy = self.meta[:, 2]
+        # Create the bin edges evenly spaced in log-space
+        min_log = np.log10(energy.min())
+        max_log = np.log10(energy.max())
+        log_bins = np.logspace(min_log, max_log, num_bins)
+        axes[0].hist(energy, bins=log_bins)
+        axes[0].set_xlabel("EvtJointEnergy [MeV]")
+        axes[0].set_xscale("log")
+        axes[0].set_title("Reconstructed Energy")
+        # MC energy spectrum
+        mc_energy = self.meta[:, 3]
+        min_log = np.log10(mc_energy.min())
+        max_log = np.log10(mc_energy.max())
+        log_bins = np.logspace(min_log, max_log, num_bins)
+        axes[1].hist(mc_energy, bins=log_bins)
+        axes[1].set_xlabel("McEnergy [MeV]")
+        axes[1].set_xscale("log")
+        axes[1].set_title("Simulated Energy")
+
+        
+    def plot(self) -> None:
+        plt.show()
 
     def close(self) -> None:
         """ Closes the numpy archive to free up memory.
@@ -125,6 +152,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Validate and Visualize compressed LAT chunks.')
     parser.add_argument('file', type=str, help='Path to the .npz chunk file to validate')
     parser.add_argument('--check-energy', action='store_true', help='Plot the distribution of the energy reconstruction error.')
+    parser.add_argument('--energy-spectrum', action='store_true', help='Plot the reconstructed energy distribution.')
     parser.add_argument('--event', type=int, default=0, help='Index of the event to visualize (default: 0)')
     parser.add_argument('--no-plot', action='store_true', help='Skip the visualization and only run validation checks')
 
@@ -134,10 +162,14 @@ if __name__ == '__main__':
     validator.verify_shapes()
     validator.print_summary()
     # Optionally visualize
-    if not args.no_plot and not args.check_energy:
+    if not args.no_plot and not args.check_energy and not args.energy_spectrum:
         logger.info(f"Rendering visualization for event index {args.event}...")
         validator.visualize_event(index=args.event)
     if args.check_energy:
         validator.check_energy_recon()
+    if args.energy_spectrum:
+        validator.energy_spectrum()
+    if not args.no_plot:
+        validator.plot()
     # Close
     validator.close()
