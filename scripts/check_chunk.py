@@ -82,23 +82,23 @@ class ChunkValidator:
         fig, axes = plt.subplots(1, 3, figsize=(18, 6), constrained_layout=True)
         fig.suptitle(f'Fermi-LAT All Views (Run {run_id:.0f}, Event {event_id:.0f}, Energy {energy:.2f} MeV, McEnergy {mc_energy:.2f})', fontsize=16)
         # X-Z View
-        axes[0].imshow(self.view_x[index], cmap='plasma', origin='lower', vmin=0, vmax=1)
+        axes[0].imshow(self.view_x[index], cmap='plasma', origin='lower')
         axes[0].set_title('X-Z Projection (Side View)')
         axes[0].set_xlabel('LAT X Width (113 Pixels)')
         axes[0].set_ylabel('LAT Z Height (113 Pixels)')
         # axes[0].legend(loc='upper right')
         # Y-Z View
-        axes[1].imshow(self.view_y[index], cmap='plasma', origin='lower', vmin=0, vmax=1)
+        axes[1].imshow(self.view_y[index], cmap='plasma', origin='lower')
         axes[1].set_title('Y-Z Projection (Side View)')
         axes[1].set_xlabel('LAT Y Width (113 Pixels)')
         axes[1].set_ylabel('LAT Z Height (113 Pixels)')
         # X-Y Top View
-        mesh_top = axes[2].imshow(self.view_top[index], cmap='plasma', origin='lower', vmin=0, vmax=1)
+        mesh_top = axes[2].imshow(self.view_top[index], cmap='plasma', origin='lower')
         axes[2].set_title('X-Y Projection (CAL Top-Down)')
         axes[2].set_xlabel('LAT X Width (113 Pixels)')
         axes[2].set_ylabel('LAT Y Width (113 Pixels)')
         # Colorbar
-        fig.colorbar(mesh_top, ax=axes, label='Normalized Log10(Energy)', shrink=0.8, pad=0.02)
+        fig.colorbar(mesh_top, ax=axes, label='Energy [MeV]', shrink=0.8, pad=0.02)
 
     def check_energy_recon(self) -> None:
         """ Plots the distribution of the energy reconstruction error.
