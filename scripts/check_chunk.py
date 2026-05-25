@@ -5,6 +5,7 @@ from pathlib import Path
 import argparse
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 
 logging.basicConfig(
     level=logging.INFO,
@@ -78,27 +79,35 @@ class ChunkValidator:
             logger.error(f'Index {index} is out of bounds. File only has {self.num_events} events.')
             return
         run_id, event_id, energy, mc_energy = self.meta[index]
-        # Create image
+        
         fig, axes = plt.subplots(1, 3, figsize=(18, 6), constrained_layout=True)
         fig.suptitle(f'Fermi-LAT All Views (Run {run_id:.0f}, Event {event_id:.0f}, Energy {energy:.2f} MeV, McEnergy {mc_energy:.2f})', fontsize=16)
-        # X-Z View
-        axes[0].imshow(self.view_x[index], cmap='plasma', origin='lower')
+        
+        # Determine dynamic maxes for the log scale (fallback to 1.0 if empty)
+        vmax_x = self.view_x[index].max() if self.view_x[index].max() > 0 else 1.0
+        vmax_y = self.view_y[index].max() if self.view_y[index].max() > 0 else 1.0
+        vmax_top = self.view_top[index].max() if self.view_top[index].max() > 0 else 1.0
+
+        # --- X-Z View ---
+        axes[0].imshow(self.view_x[index], cmap='plasma', origin='lower', norm=LogNorm(vmin=1e-3, vmax=vmax_x + 1))
         axes[0].set_title('X-Z Projection (Side View)')
         axes[0].set_xlabel('LAT X Width (113 Pixels)')
         axes[0].set_ylabel('LAT Z Height (113 Pixels)')
-        # axes[0].legend(loc='upper right')
-        # Y-Z View
-        axes[1].imshow(self.view_y[index], cmap='plasma', origin='lower')
+        
+        # --- Y-Z View ---
+        axes[1].imshow(self.view_y[index], cmap='plasma', origin='lower', norm=LogNorm(vmin=1e-3, vmax=vmax_y + 1))
         axes[1].set_title('Y-Z Projection (Side View)')
         axes[1].set_xlabel('LAT Y Width (113 Pixels)')
         axes[1].set_ylabel('LAT Z Height (113 Pixels)')
-        # X-Y Top View
-        mesh_top = axes[2].imshow(self.view_top[index], cmap='plasma', origin='lower')
+        
+        # --- X-Y Top View ---
+        mesh_top = axes[2].imshow(self.view_top[index], cmap='plasma', origin='lower', norm=LogNorm(vmin=1e-3, vmax=vmax_top + 1))
         axes[2].set_title('X-Y Projection (CAL Top-Down)')
         axes[2].set_xlabel('LAT X Width (113 Pixels)')
         axes[2].set_ylabel('LAT Y Width (113 Pixels)')
-        # Colorbar
-        fig.colorbar(mesh_top, ax=axes, label='Energy [MeV]', shrink=0.8, pad=0.02)
+        
+        # Colorbar that shows raw MeVs
+        fig.colorbar(mesh_top, ax=axes, label='Energy [MeV] (Log Scale)', shrink=0.8, pad=0.02)
 
     def check_energy_recon(self) -> None:
         """ Plots the distribution of the energy reconstruction error.
@@ -120,25 +129,30 @@ class ChunkValidator:
         fig.suptitle(f"Energy spectrum comparison - Chunk: {self.filepath.name}")
         num_bins = 50
         energy = self.meta[:, 2]
-        # Create the bin edges evenly spaced in log-space
-        min_log = np.log10(energy.min())
-        max_log = np.log10(energy.max())
-        log_bins = np.logspace(min_log, max_log, num_bins)
-        axes[0].hist(energy, bins=log_bins)
+        
+        # Safely create bin edges evenly spaced in log-space (skip 0s)
+        safe_energy = energy[energy > 0]
+        if len(safe_energy) > 0:
+            min_log = np.log10(safe_energy.min())
+            max_log = np.log10(safe_energy.max())
+            log_bins = np.logspace(min_log, max_log, num_bins)
+            axes[0].hist(safe_energy, bins=log_bins, edgecolor='black', alpha=0.8)
+            axes[0].set_xscale("log")
         axes[0].set_xlabel("EvtJointEnergy [MeV]")
-        axes[0].set_xscale("log")
         axes[0].set_title("Reconstructed Energy")
+        
         # MC energy spectrum
         mc_energy = self.meta[:, 3]
-        min_log = np.log10(mc_energy.min())
-        max_log = np.log10(mc_energy.max())
-        log_bins = np.logspace(min_log, max_log, num_bins)
-        axes[1].hist(mc_energy, bins=log_bins)
+        safe_mc = mc_energy[mc_energy > 0]
+        if len(safe_mc) > 0:
+            min_log = np.log10(safe_mc.min())
+            max_log = np.log10(safe_mc.max())
+            log_bins = np.logspace(min_log, max_log, num_bins)
+            axes[1].hist(safe_mc, bins=log_bins, edgecolor='black', alpha=0.8)
+            axes[1].set_xscale("log")
         axes[1].set_xlabel("McEnergy [MeV]")
-        axes[1].set_xscale("log")
         axes[1].set_title("Simulated Energy")
 
-        
     def plot(self) -> None:
         plt.show()
 
@@ -151,25 +165,73 @@ class ChunkValidator:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Validate and Visualize compressed LAT chunks.')
     parser.add_argument('file', type=str, help='Path to the .npz chunk file to validate')
-    parser.add_argument('--check-energy', action='store_true', help='Plot the distribution of the energy reconstruction error.')
-    parser.add_argument('--energy-spectrum', action='store_true', help='Plot the reconstructed energy distribution.')
-    parser.add_argument('--event', type=int, default=0, help='Index of the event to visualize (default: 0)')
-    parser.add_argument('--no-plot', action='store_true', help='Skip the visualization and only run validation checks')
+    
+    # --- Analysis Arguments ---
+    analysis_group = parser.add_argument_group('Analysis Options')
+    analysis_group.add_argument('--check-energy', action='store_true', help='Plot the distribution of the energy reconstruction error.')
+    analysis_group.add_argument('--energy-spectrum', action='store_true', help='Plot the reconstructed energy distribution.')
+    
+    # --- Visualization Arguments ---
+    vis_group = parser.add_argument_group('Visualization Options')
+    vis_group.add_argument('--event', type=int, default=None, help='Index of a specific event to visualize')
+    vis_group.add_argument('--loop', action='store_true', help='Loop through all events sequentially')
+    vis_group.add_argument('--no-plot', action='store_true', help='Skip all visualizations and only run validation checks')
 
     args = parser.parse_args()
     validator = ChunkValidator(args.file)
-    # Run the validation checks
+    
+    # Run the Validation Checks
     validator.verify_shapes()
     validator.print_summary()
-    # Optionally visualize
-    if not args.no_plot and not args.check_energy and not args.energy_spectrum:
-        logger.info(f"Rendering visualization for event index {args.event}...")
-        validator.visualize_event(index=args.event)
+    
+    # Exit early if the user just wanted a silent data check
+    if args.no_plot:
+        validator.close()
+        sys.exit(0)
+        
+    # Handle Global Analysis Plots (Energy Spectra, etc.)
+    show_global_plots = False
     if args.check_energy:
         validator.check_energy_recon()
+        show_global_plots = True
+        
     if args.energy_spectrum:
         validator.energy_spectrum()
-    if not args.no_plot:
+        show_global_plots = True
+        
+    if show_global_plots:
+        logger.info("Displaying global analysis plots. Close the plot windows to continue.")
         validator.plot()
-    # Close
+        
+    # Handle Event Visualization (Loop or Single Event)
+    if args.loop:
+        logger.info("Entering event loop mode...")
+        for i in range(validator.num_events):
+            logger.info(f"Rendering event {i} / {validator.num_events - 1}...")
+            validator.visualize_event(index=i)
+            validator.plot()
+            
+            # The script pauses here while the window is open. 
+            # Once closed, ask the user how to proceed:
+            try:
+                ans = input(f"Event {i} closed. Press [Enter] for next event, or type 'q' to quit: ")
+                if ans.strip().lower() == 'q':
+                    logger.info("Exiting event loop.")
+                    break
+            except KeyboardInterrupt:
+                break
+                
+    elif args.event is not None:
+        # Show specific event if requested
+        logger.info(f"Rendering visualization for requested event index {args.event}...")
+        validator.visualize_event(index=args.event)
+        validator.plot()
+        
+    elif not show_global_plots:
+        # Default behavior: If they didn't ask for any plots specifically, just show event 0
+        logger.info("Rendering visualization for default event index 0...")
+        validator.visualize_event(index=0)
+        validator.plot()
+
+    # Clean up memory
     validator.close()
