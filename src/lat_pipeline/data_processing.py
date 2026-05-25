@@ -60,13 +60,13 @@ class BatchProcessor:
     def _stack_side_view(self, tkr_matrix: np.ndarray, cal_matrix: np.ndarray, energy: float) -> np.ndarray:
         """ Helper to normalize and stack a side projection.
         """
-        norm_tkr = np.ma.filled(normalize_log_matrix(tkr_matrix, norm=energy), fill_value=0.0)
-        norm_cal = np.ma.filled(normalize_log_matrix(cal_matrix, norm=energy), fill_value=0.0)
+        # filled_tkr = np.ma.filled(tkr_matrix, fill_value=0.0)
+        # filled_cal = np.ma.filled(cal_matrix, fill_value=0.0)
         # Create the physical gap between CAL and TKR (3-pixel gap for geometric accuracy (~75mm))
         gap_pad = np.zeros((3, 113), dtype=np.float32)
         # Stack vertically: CAL (bottom), Gap, TKR (top)
         # Total rows = 8 + 3 + 18 = 27 rows
-        combined_matrix = np.vstack((norm_cal, gap_pad, norm_tkr))
+        combined_matrix = np.vstack((cal_matrix, gap_pad, tkr_matrix))
         rows = np.size(combined_matrix, axis=0)
         columns = np.size(combined_matrix, axis=1)
         # Pad the top to reach exactly 113x113
@@ -99,7 +99,7 @@ class BatchProcessor:
             # Append to chunk lists
             matrices_x.append(combined_x)
             matrices_y.append(combined_y)
-            matrices_top.append(norm_top)
+            matrices_top.append(cal_top)
             event_infos.append([event.run_id, event.event_id, event.total_energy, event.mc_energy])
             event_count += 1
             # Save and flush memory when chunk is full
