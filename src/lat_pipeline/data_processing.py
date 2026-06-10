@@ -104,7 +104,7 @@ class BatchProcessor:
             matrices_top.append(raw_top)
             event_infos.append([event.run_id, event.event_id, event.total_energy, event.mc_energy])
             merit_names.append(list(merit_vars.keys()))
-            merit_values.append([merit_vars[key] for key in merit_names])
+            merit_values.append([merit_vars[key] for key in merit_names[event_count]])
             event_count += 1
             # Save and flush memory when chunk is full
             if event_count >= self.chunk_size:
