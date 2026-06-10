@@ -57,8 +57,8 @@ class BatchProcessor:
         self.chunk_size = self.config['pipeline']['chunk_size']
         self.stream_parser = StreamParser(config=self.config)
 
-    def _stack_side_view(self, tkr_matrix: np.ndarray, cal_matrix: np.ndarray, energy: float) -> np.ndarray:
-        """ Helper to normalize and stack a side projection.
+    def _stack_side_view(self, tkr_matrix: np.ndarray, cal_matrix: np.ndarray) -> np.ndarray:
+        """ Helper to stack a side projection.
         """
         raw_tkr = np.ma.filled(tkr_matrix, fill_value=0.0)
         raw_cal = np.ma.filled(cal_matrix, fill_value=0.0)
@@ -81,18 +81,20 @@ class BatchProcessor:
         matrices_y = []
         matrices_top = []
         event_infos = []    # Store run_id, event_id, energy as metadata
+        merit_values = []
+        merit_names = []
         chunk_index = 0
         event_count = 0
         # Iterate through the piped stream dinamically
-        for event, tkr, cal in self.stream_parser.parse_stream():
+        for event, tkr, cal, merit_vars in self.stream_parser.parse_stream():
             # Process X-Z view
             tkr_x, _, _ = tkr.get_matrix('x')
             cal_x, _, _ = cal.get_matrix_side('x')
-            combined_x = self._stack_side_view(tkr_x, cal_x, event.total_energy)
+            combined_x = self._stack_side_view(tkr_x, cal_x)
             # Process Y-Z view
             tkr_y, _, _ = tkr.get_matrix('y')
             cal_y, _, _ = cal.get_matrix_side('y')
-            combined_y = self._stack_side_view(tkr_y, cal_y, event.total_energy)
+            combined_y = self._stack_side_view(tkr_y, cal_y)
             # Process X-Y view (CAL only)
             cal_top, _, _ = cal.get_matrix_top()
             raw_top = np.ma.filled(cal_top, fill_value=0.0)
@@ -101,19 +103,21 @@ class BatchProcessor:
             matrices_y.append(combined_y)
             matrices_top.append(raw_top)
             event_infos.append([event.run_id, event.event_id, event.total_energy, event.mc_energy])
+            merit_names.append(list(merit_vars.keys()))
+            merit_values.append([merit_vars[key] for key in merit_names])
             event_count += 1
             # Save and flush memory when chunk is full
             if event_count >= self.chunk_size:
-                self._save_chunk(matrices_x, matrices_y, matrices_top, event_infos, output_prefix, chunk_index)
+                self._save_chunk(matrices_x, matrices_y, matrices_top, event_infos, merit_values, merit_names, output_prefix, chunk_index)
                 # Reset lists to free up RAM
                 matrices_x, matrices_y, matrices_top, event_infos = [], [], [], []
                 chunk_index += 1
                 event_count = 0
         # Save any remaining events after the pipe closes
         if event_count > 0:
-            self._save_chunk(matrices_x, matrices_y, matrices_top, event_infos, output_prefix, chunk_index)
+            self._save_chunk(matrices_x, matrices_y, matrices_top, event_infos, merit_values, merit_names, output_prefix, chunk_index)
 
-    def _save_chunk(self, mat_x, mat_y, mat_top, info, prefix, index):
+    def _save_chunk(self, mat_x, mat_y, mat_top, info, vars, vars_names, prefix, index):
         """ Helper to save a list of matrices to a compressed numpy archive.
         """
         filename = f'{prefix}_chunk_{index:04d}.npz'
@@ -123,6 +127,8 @@ class BatchProcessor:
             view_x=np.array(mat_x, dtype=np.float32),
             view_y=np.array(mat_y, dtype=np.float32),
             view_top=np.array(mat_top, dtype=np.float32),
-            meta=np.array(info, dtype=np.float32)
+            meta=np.array(info, dtype=np.float32),
+            merit_values=np.array(vars, dtype=np.float32),
+            merit_names=np.array(vars_names, dtype=str)
         )
         print(f'Saved {filename} with {len(info)} events.')
