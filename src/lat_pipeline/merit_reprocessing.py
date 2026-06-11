@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def merit_reprocessing(merit_vars: dict) -> dict:
-    df0 = pd.DataFrame(merit_vars)
+    df0 = pd.DataFrame([merit_vars])
     df1 = pd.DataFrame()
     #CalNewCfpSelChiSqLog
     df1["CalNewCfpSelChiSqLog"] = np.log10(df0["CalNewCfpSelChiSq"].values)
