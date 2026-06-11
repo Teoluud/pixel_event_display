@@ -1,6 +1,6 @@
 import numpy as np
 
-def merit_reprocessing(merit_vars: dict, energy: float) -> dict:
+def merit_reprocessing(merit_vars: dict) -> dict:
     """
     Processes a single event's merit variables using safe, pure Python math.
     No Pandas overhead, natively handles single scalar values.
@@ -15,7 +15,7 @@ def merit_reprocessing(merit_vars: dict, energy: float) -> dict:
     CalNewCfpSelChiSq = get_val("CalNewCfpSelChiSq")
     CalELayer1 = get_val("CalELayer1")
     CalELayer0 = get_val("CalELayer0")
-    EvtJointEnergy = energy
+    EvtJointEnergy = get_val("EvtJointEnergy")
     TkrEnergyCorr = get_val("TkrEnergyCorr")
     Tkr1ZDir = get_val("Tkr1ZDir")
     CalXEcntr = get_val("CalXEcntr")
