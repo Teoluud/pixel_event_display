@@ -114,4 +114,9 @@ def merit_reprocessing(merit_vars: dict) -> dict:
     # 17. CalTransRms
     df1["CalTransRms"] = CalTransRms
 
+    # Replace all physical NaNs with 0.0 so PyTorch dataloaders don't crash
+    for key, value in df1.items():
+        if np.isnan(value):
+            df1[key] = 0.0
+
     return df1
