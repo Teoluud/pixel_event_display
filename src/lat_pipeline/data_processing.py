@@ -89,6 +89,7 @@ class BatchProcessor:
         # Iterate through the piped stream dinamically
         for event, tkr, cal, merit_vars in self.stream_parser.parse_stream():
             merit_vars = merit_reprocessing(merit_vars)
+            breakpoint()
             # Process X-Z view
             tkr_x, _, _ = tkr.get_matrix('x')
             cal_x, _, _ = cal.get_matrix_side('x')
