@@ -43,6 +43,8 @@ def merit_reprocessing(merit_vars: dict, energy: float) -> dict:
         df1["CalELayer10RatioES"] = np.nan
 
     # 3. TkrEnergyFracLogZS
+    if np.isnan(TkrEnergyCorr) or np.isnan(Tkr1ZDir) or TkrEnergyCorr <= 0:
+        print(f"🚨 TKR BUG - TkrEnergyCorr: {TkrEnergyCorr} | Tkr1ZDir: {Tkr1ZDir}")
     if EvtJointEnergy > 0 and TkrEnergyCorr > 0:
         # np.log10 requires > 0, max(1.0, E) protects the denominator
         df1["TkrEnergyFracLogZS"] = np.log10(TkrEnergyCorr / max(1.0, EvtJointEnergy)) - 0.8 * (Tkr1ZDir + 1)
