@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-def merit_reprocessing(merit_vars: dict) -> dict:
+def merit_reprocessing(merit_vars: dict, energy: float) -> dict:
     df0 = pd.DataFrame([merit_vars])
     df1 = pd.DataFrame()
     #CalNewCfpSelChiSqLog
