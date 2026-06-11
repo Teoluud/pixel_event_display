@@ -4,6 +4,7 @@ from .stream_parser import StreamParser
 from .import_data import ImportData
 from .event_display import EventDisplay
 from .utils import normalize_log_matrix
+from .merit_reprocessing import merit_reprocessing
 
 
 class DataProcessing:
@@ -87,6 +88,7 @@ class BatchProcessor:
         event_count = 0
         # Iterate through the piped stream dinamically
         for event, tkr, cal, merit_vars in self.stream_parser.parse_stream():
+            merit_vars = merit_reprocessing(merit_vars)
             # Process X-Z view
             tkr_x, _, _ = tkr.get_matrix('x')
             cal_x, _, _ = cal.get_matrix_side('x')
