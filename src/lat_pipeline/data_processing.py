@@ -1,4 +1,5 @@
 import numpy as np
+import h5py
 
 from .stream_parser import StreamParser
 from .import_data import ImportData
@@ -110,16 +111,16 @@ class BatchProcessor:
             event_count += 1
             # Save and flush memory when chunk is full
             if event_count >= self.chunk_size:
-                self._save_chunk(matrices_x, matrices_y, matrices_top, event_infos, merit_values, merit_names, output_prefix, chunk_index)
+                self._save_chunk_hdf5(matrices_x, matrices_y, matrices_top, event_infos, merit_values, merit_names, output_prefix, chunk_index)
                 # Reset lists to free up RAM
                 matrices_x, matrices_y, matrices_top, event_infos = [], [], [], []
                 chunk_index += 1
                 event_count = 0
         # Save any remaining events after the pipe closes
         if event_count > 0:
-            self._save_chunk(matrices_x, matrices_y, matrices_top, event_infos, merit_values, merit_names, output_prefix, chunk_index)
+            self._save_chunk_hdf5(matrices_x, matrices_y, matrices_top, event_infos, merit_values, merit_names, output_prefix, chunk_index)
 
-    def _save_chunk(self, mat_x, mat_y, mat_top, info, vars, vars_names, prefix, index):
+    def _save_chunk_npz(self, mat_x, mat_y, mat_top, info, vars, vars_names, prefix, index):
         """ Helper to save a list of matrices to a compressed numpy archive.
         """
         filename = f'{prefix}_chunk_{index:04d}.npz'
@@ -134,3 +135,16 @@ class BatchProcessor:
             merit_names=np.array(vars_names, dtype=str)
         )
         print(f'Saved {filename} with {len(info)} events.')
+
+    def _save_chunk_hdf5(self, mat_x, mat_y, mat_top, info, vars, vars_names, prefix, index) -> None:
+        """ Helper to save the data to a hdf5 file.
+        """
+        filename = f"{prefix}_chunk_{index:04d}.hdf5"
+        with h5py.File(filename, "w") as f:
+            f.create_dataset("view_x", data=mat_x, dtype=np.float32)
+            f.create_dataset("view_y", data=mat_y, dtype=np.float32)
+            f.create_dataset("view_top", data=mat_top, dtype=np.float32)
+            f.create_dataset("meta", data=info, dtype=np.float32)
+            f.create_dataset("merit_values", data=vars, dtype=np.float32)
+            f.create_dataset("merit_names", data=vars_names, dtype=h5py.string_dtype(encoding='utf-8'))
+

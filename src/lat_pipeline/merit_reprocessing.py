@@ -2,8 +2,7 @@ import numpy as np
 
 def merit_reprocessing(merit_vars: dict) -> dict:
     """
-    Processes a single event's merit variables using safe, pure Python math.
-    Strictly aligned with the 17 output variables from the original script.
+    Reprocesses the event merit variables to obtain the 17 needed for the NN.
     """
     df1 = {}
 
