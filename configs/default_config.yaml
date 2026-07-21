@@ -16,5 +16,5 @@ geometry:
     bin_height_mm: 13.9
 
 pipeline:
-  chunk_size: 10000
+  chunk_size: 50000
   jitter_bounds: 1e-5
