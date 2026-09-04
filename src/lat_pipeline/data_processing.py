@@ -114,6 +114,7 @@ class BatchProcessor:
                 self._save_chunk_hdf5(matrices_x, matrices_y, matrices_top, event_infos, merit_values, merit_names, output_prefix, chunk_index)
                 # Reset lists to free up RAM
                 matrices_x, matrices_y, matrices_top, event_infos = [], [], [], []
+                merit_values, merit_names = [], []
                 chunk_index += 1
                 event_count = 0
         # Save any remaining events after the pipe closes
@@ -141,11 +142,11 @@ class BatchProcessor:
         """
         filename = f"{prefix}_chunk_{index:04d}.hdf5"
         with h5py.File(filename, "w") as f:
-            f.create_dataset("view_x", data=mat_x, dtype=np.float32, compression="gzip")
-            f.create_dataset("view_y", data=mat_y, dtype=np.float32, compression="gzip")
-            f.create_dataset("view_top", data=mat_top, dtype=np.float32, compression="gzip")
-            f.create_dataset("meta", data=info, dtype=np.float32, compression="gzip")
-            f.create_dataset("merit_values", data=vars, dtype=np.float32, compression="gzip")
+            f.create_dataset("view_x", data=mat_x, dtype=np.float32)
+            f.create_dataset("view_y", data=mat_y, dtype=np.float32)
+            f.create_dataset("view_top", data=mat_top, dtype=np.float32)
+            f.create_dataset("meta", data=info, dtype=np.float32)
+            f.create_dataset("merit_values", data=vars, dtype=np.float32)
             f.create_dataset("merit_names", data=vars_names, dtype=h5py.string_dtype(encoding='utf-8'))
         
         print(f'Saved {filename} with {len(info)} events.')
