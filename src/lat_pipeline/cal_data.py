@@ -29,8 +29,9 @@ class CalData:
         raw_x = np.asarray(self.df['X'], dtype=np.float32)
         raw_y = np.asarray(self.df['Y'], dtype=np.float32)
         # Apply micro-jitter to all hits
-        self.x: NDArray[np.float32] = raw_x + np.random.uniform(-1e-5, 1e-5, size=len(raw_x))
-        self.y: NDArray[np.float32] = raw_y + np.random.uniform(-1e-5, 1e-5, size=len(raw_y))
+        jitter = self.config["pipeline"]["jitter_bounds"]
+        self.x: NDArray[np.float32] = raw_x + np.random.uniform(-jitter, jitter, size=len(raw_x))
+        self.y: NDArray[np.float32] = raw_y + np.random.uniform(-jitter, jitter, size=len(raw_y))
         self.z: NDArray[np.float32] = np.asarray(self.df['Z'], dtype=np.float32)
         self.E: NDArray[np.float32] = np.asarray(self.df['Energy_MeV'], dtype=np.float32)
     
