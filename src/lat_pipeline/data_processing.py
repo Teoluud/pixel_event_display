@@ -1,65 +1,23 @@
+from typing import Any
+
 import numpy as np
+from numpy.typing import NDArray
 import h5py
 
 from .stream_parser import StreamParser
-from .import_data import ImportData
-from .event_display import EventDisplay
-from .utils import normalize_log_matrix
 from .merit_reprocessing import merit_reprocessing
 
 
-class DataProcessing:
-    """ 
-    High-level orchestrator class. 
-    It commands the ImportData (Controller), fetches processed matrices, and pushes them to the EventDisplay (View).
-    """
-    def __init__(self, path: str, run_id: str, event_id: str, config: dict) -> None:
-        """
-        Constructor.
-        """
-        self.path       = path
-        self.run_id     = run_id
-        self.event_id   = event_id
-        self.config     = config
-
-    def process_and_display(self, view: str = 'x') -> None:
-        """
-        Runs the full pipeline for a specific projection.
-        """
-        # Import data
-        importer = ImportData(self.path, self.run_id, self.event_id, config=self.config)
-        event, tkr, cal = importer.import_event()
-        # Instantiate the display view
-        self.display = EventDisplay(self.run_id, self.event_id, event_energy=event.total_energy)
-        # Extract matrices and render
-        if view.lower() == 'top':
-            cal_matrix_top, cal_x, cal_y    = cal.get_matrix_top()
-            norm_cal_matrix_top = normalize_log_matrix(cal_matrix_top, norm=event.total_energy)
-            self.display.plot_topdown_view(cal_x, cal_y, norm_cal_matrix_top)
-        else:
-            tkr_matrix, tkr_x, tkr_z        = tkr.get_matrix(view)
-            norm_tkr_matrix = normalize_log_matrix(tkr_matrix, norm=event.total_energy)
-            cal_matrix_side, cal_x, cal_z   = cal.get_matrix_side(view)
-            norm_cal_matrix_side = normalize_log_matrix(cal_matrix_side, norm=event.total_energy)
-            # Render via the View
-            self.display.plot_combined_view(tkr_x, tkr_z, norm_tkr_matrix, cal_x, cal_z, norm_cal_matrix_side, view_name=view)
-            # self.display.plot_single_view(tkr_x, tkr_z, tkr_matrix, view_name=view, detector='TKR')
-            # self.display.plot_single_view(cal_x, cal_z, cal_matrix_side, view_name=view, detector='CAL')
-        self.display.show_all()
-
-
 class BatchProcessor:
-    """ Processes piped events and saves matrices in bulk.
-    """
+    """ Processes piped events and saves matrices in bulk. """
 
-    def __init__(self, config: dict) -> None:
-        """ Constructor.
-        """
+    def __init__(self, config: dict[str, Any]) -> None:
+        """ Constructor. """
         self.config = config
         self.chunk_size = self.config['pipeline']['chunk_size']
         self.stream_parser = StreamParser(config=self.config)
 
-    def _stack_side_view(self, tkr_matrix: np.ndarray, cal_matrix: np.ndarray) -> np.ndarray:
+    def _stack_side_view(self, tkr_matrix: NDArray[np.float32], cal_matrix: NDArray[np.float32]) -> NDArray[np.float32]:
         """ Helper to stack a side projection.
         """
         raw_tkr = np.ma.filled(tkr_matrix, fill_value=0.0)
@@ -121,9 +79,8 @@ class BatchProcessor:
         if event_count > 0:
             self._save_chunk_hdf5(matrices_x, matrices_y, matrices_top, event_infos, merit_values, merit_names, output_prefix, chunk_index)
 
-    def _save_chunk_npz(self, mat_x, mat_y, mat_top, info, vars, vars_names, prefix, index):
-        """ Helper to save a list of matrices to a compressed numpy archive.
-        """
+    def _save_chunk_npz(self, mat_x, mat_y, mat_top, info, vars, vars_names, prefix, index) -> None:
+        """ Helper to save a list of matrices to a compressed numpy archive. """
         filename = f'{prefix}_chunk_{index:04d}.npz'
         # Save compressed
         np.savez_compressed(

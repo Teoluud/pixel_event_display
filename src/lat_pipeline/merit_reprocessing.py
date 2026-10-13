@@ -1,13 +1,13 @@
 import numpy as np
 
-def merit_reprocessing(merit_vars: dict) -> dict:
+def merit_reprocessing(merit_vars: dict[str, float]) -> dict[str, float]:
     """
     Reprocesses the event merit variables to obtain the 17 needed for the NN.
     """
-    df1 = {}
+    df1: dict[str, float] = {}
 
     # Helper to safely grab variables (defaults to NaN if missing)
-    def get_val(key):
+    def get_val(key: str) -> float:
         return float(merit_vars.get(key, np.nan))
 
     # Grab required input variables

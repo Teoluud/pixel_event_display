@@ -3,3 +3,7 @@ __pycache__
 .vscode
 *~
 *.npz
+*.eps
+*.png
+*.root
+plotMc_data.py

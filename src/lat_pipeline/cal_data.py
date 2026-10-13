@@ -1,6 +1,8 @@
 import sys
+from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 
 from .event import Event
@@ -11,7 +13,7 @@ class CalData:
     """ Class that handles calorimeter data.
     """
 
-    def __init__(self, dataframe: pd.DataFrame, event: Event, config: dict) -> None:
+    def __init__(self, dataframe: pd.DataFrame, event: Event, config: dict[str, Any]) -> None:
         """ Constructor.
         """
         self.event = event
@@ -24,15 +26,15 @@ class CalData:
         self.EXT_GAP = self.config['geometry']['cal']['ext_gap_mm']
         # Extract data
         self.df: pd.DataFrame   = dataframe
-        raw_x = self.df['X'].to_numpy()
-        raw_y = self.df['Y'].to_numpy()
+        raw_x = np.asarray(self.df['X'], dtype=np.float32)
+        raw_y = np.asarray(self.df['Y'], dtype=np.float32)
         # Apply micro-jitter to all hits
-        self.x: np.ndarray      = raw_x + np.random.uniform(-1e-5, 1e-5, size=len(raw_x))
-        self.y: np.ndarray      = raw_y + np.random.uniform(-1e-5, 1e-5, size=len(raw_y))
-        self.z: np.ndarray      = self.df['Z'].to_numpy()
-        self.E: np.ndarray      = self.df['Energy_MeV'].to_numpy()
+        self.x: NDArray[np.float32] = raw_x + np.random.uniform(-1e-5, 1e-5, size=len(raw_x))
+        self.y: NDArray[np.float32] = raw_y + np.random.uniform(-1e-5, 1e-5, size=len(raw_y))
+        self.z: NDArray[np.float32] = np.asarray(self.df['Z'], dtype=np.float32)
+        self.E: NDArray[np.float32] = np.asarray(self.df['Energy_MeV'], dtype=np.float32)
     
-    def split_boundary_hits(self, coord_data: np.ndarray, bin_edges: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def split_boundary_hits(self, coord_data: NDArray[np.float32], bin_edges: NDArray[np.float32]) -> tuple[NDArray[np.float32], NDArray[np.float32], NDArray[np.float32]]:
         """
         Takes the hits on the middle of the crystal (which then are right on the bin boundary), and split them on the adjacient bins.
         It doubles the hit, then halves the energy and assigns one to the left of the boundary and one to the right.
@@ -65,7 +67,7 @@ class CalData:
         return final_coord, final_z, final_E
 
 
-    def get_matrix_side(self, coord: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_matrix_side(self, coord: str) -> tuple[NDArray[np.float32], NDArray[np.float32], NDArray[np.float32]]:
         """ Returns the matrix and the binning for a side projection.
         """
         if coord.lower() == 'x':
@@ -81,10 +83,10 @@ class CalData:
                                                    bins=[custom_x_edges, custom_z_edges],
                                                    #range=[[-self.SIDE,self.SIDE], [self.z.min(),self.z.max()]],
                                                    weights=self.E)
-        matrix_masked:np.ndarray = np.ma.masked_where(matrix == 0, matrix)
+        matrix_masked: np.ma.MaskedArray[np.float64, np.dtype[np.float64]] = np.ma.masked_array(matrix, mask=matrix == 0)
         return matrix_masked.T, x1_edges, z_edges
     
-    def get_matrix_top(self):
+    def get_matrix_top(self) -> tuple[NDArray[np.float32], NDArray[np.float32], NDArray[np.float32]]:
         """ Returns the matrix and the binning for the top projection.
         """
         x_data = self.x.copy()
@@ -94,5 +96,5 @@ class CalData:
                                                    bins=[custom_edges, custom_edges],
                                                    #range=[[-self.SIDE,self.SIDE], [-self.SIDE,self.SIDE]],
                                                    weights=self.E)
-        matrix_masked:np.ndarray = np.ma.masked_where(matrix == 0, matrix)
+        matrix_masked: np.ma.MaskedArray[np.float64, np.dtype[np.float64]] = np.ma.masked_where(matrix == 0, matrix)
         return matrix_masked.T, x_edges, y_edges

@@ -1,5 +1,6 @@
 import sys
 import io
+from typing import Any
 
 import pandas as pd
 
@@ -14,7 +15,7 @@ class StreamParser:
     Yields parsed Event, TkrData, and CalData objects dynamically.
     """
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         """ Constructor.
         """
         self.config = config

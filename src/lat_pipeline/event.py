@@ -1,8 +1,10 @@
-class Event:
-    """ Parent class for the whole event. 
-    """
+from typing import Any
 
-    def __init__(self, run_id: int, event_id: int, energy: float, config: dict) -> None:
+
+class Event:
+    """ Parent class for the whole event. """
+
+    def __init__(self, run_id: int, event_id: int, energy: float, config: dict[str, Any]) -> None:
         """ Constructor.
         """
         # Set event variables
