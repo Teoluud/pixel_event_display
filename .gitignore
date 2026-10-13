@@ -6,4 +6,5 @@ __pycache__
 *.eps
 *.png
 *.root
+*.hdf5
 plotMc_data.py

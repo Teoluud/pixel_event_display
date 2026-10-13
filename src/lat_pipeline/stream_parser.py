@@ -1,6 +1,6 @@
 import sys
 import io
-from typing import Any
+from typing import Any, Iterator
 
 import pandas as pd
 
@@ -10,33 +10,32 @@ from .cal_data import CalData
 
 
 class StreamParser:
-    """ 
-    Reads pipeline standard input (sys.stdin) line by line.
+    """ Reads pipeline standard input (sys.stdin) line by line.
+    
     Yields parsed Event, TkrData, and CalData objects dynamically.
     """
 
     def __init__(self, config: dict[str, Any]) -> None:
-        """ Constructor.
-        """
         self.config = config
 
-    def parse_stream(self):
-        """ Generator that yields one event at a time from the pipe.
-        """
-        current_run_id = None
-        current_event_id = None
+    def parse_stream(self) -> Iterator[tuple[Event, TkrData, CalData, dict[str, float]]]:
+        """ Generator that yields one event at a time from the pipe. """
+        current_run_id: str | None = None
+        current_event_id: str | None = None
         current_energy = 0.0
         current_mc_energy = 0.0
         reconstructed_variables_lines: dict[str, float] = {}
         tkr_lines: list[str] = []
         cal_lines: list[str] = []
-        current_block = None
+        current_block: str | None = None
         # Read line by line from the piped upstream program
         for line in sys.stdin:
             line = line.strip()
             if not line:
                 continue
             if line.startswith("EVENT_START"):
+                # Reset the state to avoid 
+                tkr_lines, cal_lines, reconstructed_variables_lines = [], [], {}
                 # Example line: "EVENT_START Run: 50 Event: 39 Energy: 407600"
                 parts = line.split()
                 current_run_id = parts[2]
